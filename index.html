@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CampusHelper Hybrid Chatbot</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CampusHelper</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -15,23 +14,30 @@
       padding: 0;
       display: flex;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
+      align-items: flex-start;
+      min-height: 100vh;
     }
-    #chatbox {
+    #container {
       width: 100%;
-      max-width: 600px;
+      max-width: 650px;
+      margin-top: 3rem;
       background: white;
-      padding: 1.5rem;
+      padding: 2rem;
       border-radius: 16px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
     }
     h2 {
-      margin: 0 0 1rem 0;
+      margin-top: 0;
       font-weight: 600;
       color: #1e3a8a;
+    }
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 300px;
+      margin-bottom: 1rem;
     }
     .bubble {
       margin: 0.5rem 0;
@@ -48,12 +54,6 @@
     .bot {
       background: #f3f4f6;
       align-self: flex-start;
-    }
-    .timestamp {
-      font-size: 0.75rem;
-      color: #6b7280;
-      margin-top: 2px;
-      margin-bottom: 4px;
     }
     .input-row {
       display: flex;
@@ -74,37 +74,16 @@
       border-radius: 12px;
       cursor: pointer;
       font-size: 1rem;
+      transition: background 0.2s;
     }
     button:hover {
       background-color: #1d4ed8;
     }
-    .action-btn {
-      margin-top: 0.5rem;
-      padding: 0.5rem;
-      background-color: #e5e7eb;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 0.9rem;
-      cursor: pointer;
-      color: #374151;
-    }
     #summary {
       margin-top: 2rem;
     }
-    #githubLink {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      opacity: 0.8;
-    }
-    #githubLink:hover {
-      opacity: 1;
-    }
-    label {
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+    canvas {
+      margin-top: 1rem;
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
@@ -113,132 +92,100 @@
   </style>
 </head>
 <body>
-  <div id="chatbox">
-    <h2>🎓 CampusHelper (Hybrid)</h2>
-
-    <label><input type="checkbox" id="useGPT" /> GPT-Modus aktivieren</label>
-
+  <div id="container">
+    <h2>🎓 CampusHelper</h2>
     <div id="chat"></div>
-    <div class="input-row">
-      <input type="text" id="userInput" placeholder="Stelle deine Frage..." />
-      <button onclick="sendMessage()">Senden</button>
-    </div>
+    <form class="input-row" onsubmit="sendMessage(); return false;">
+      <input type="text" id="userInput" placeholder="Frage hier..." autocomplete="off" />
+      <button type="submit">Senden</button>
+    </form>
 
-    <div class="action-btn" onclick="downloadCSV()">📁 Chatverlauf exportieren</div>
-    <div class="action-btn" onclick="clearChat()">🧹 Chat zurücksetzen</div>
     <div id="summary">
-      <canvas id="questionChart" height="150"></canvas>
+      <h4>Fragen pro Tag</h4>
+      <canvas id="chart" width="400" height="150"></canvas>
     </div>
   </div>
 
-  <a href="https://github.com/MooonShot/campushelper-chatbot" target="_blank" id="githubLink" title="View on GitHub">
-    <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" style="width:28px;height:28px;">
-  </a>
+  <footer style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: #6b7280; font-family: 'Inter', sans-serif;">
+    Made with ❤️ & ☕ by Aayush, Anshu, Abdullah & Bibesh
+  </footer>
 
   <script>
+    const hybridMode = true; // Toggle this manually if needed
+
     const qnaEndpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
     const qnaKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
     const gptEndpoint = "https://aayus-mcduf5yn-swedencentral.cognitiveservices.azure.com/";
     const gptKey = "9mPKBUdCCwKydTq9fN9WOQlYbtzC9WPfD6qnsIbKkhhk41Q2BIKBJQQJ99BFACfhMk5XJ3w3AAAAACOGeAUn";
-    const gptDeployment = "gpt-35-turbo";
+    const openAIModel = "gpt-35-turbo";
 
-    let logs = [];
+    const logs = [];
 
     async function sendMessage() {
       const input = document.getElementById("userInput");
       const question = input.value.trim();
       if (!question) return;
 
-      const timestamp = new Date();
-      logs.push({ question, timestamp });
-      addMessage(question, "user", timestamp);
+      addMessage(question, "user");
+      logs.push({ question, timestamp: new Date().toISOString() });
       updateChart();
       input.value = "";
 
       try {
-        const useGPT = document.getElementById("useGPT").checked;
+        const res = await fetch(azureEndpoint, {
+          method: "POST",
+          headers: {
+            "Ocp-Apim-Subscription-Key": azureKey,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ question })
+        });
 
-        if (useGPT) {
-          const res = await fetch(`${gptEndpoint}/openai/deployments/${gptDeployment}/chat/completions?api-version=2023-05-15`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "api-key": gptKey
-            },
-            body: JSON.stringify({
-              messages: [{ role: "user", content: question }],
-              temperature: 0.7
-            })
-          });
-          const data = await res.json();
-          const answer = data.choices?.[0]?.message?.content || "Keine Antwort von GPT erhalten.";
-          addMessage(answer, "bot", new Date());
+        const data = await res.json();
+        const answer = data.answers?.[0]?.answer;
+
+        if (answer && answer !== "Keine passende Antwort gefunden.") {
+          addMessage(answer, "bot");
         } else {
-          const res = await fetch(qnaEndpoint, {
-            method: "POST",
-            headers: {
-              "Ocp-Apim-Subscription-Key": qnaKey,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ question })
-          });
-          const data = await res.json();
-          const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
-          addMessage(answer, "bot", new Date());
+          fallbackToGPT(question);
         }
-      } catch (err) {
-        console.error(err);
-        addMessage("Fehler bei der Anfrage.", "bot", new Date());
+      } catch (e) {
+        console.error(e);
+        fallbackToGPT(question);
       }
     }
 
-    function addMessage(text, type, timestamp) {
-      const chat = document.getElementById("chat");
-      const wrapper = document.createElement("div");
+    async function fallbackToGPT(question) {
+      try {
+        const gpt = await fetch(`${openAIEndpoint}/openai/deployments/${openAIModel}/chat/completions?api-version=2023-03-15-preview`, {
+          method: "POST",
+          headers: {
+            "api-key": openAIKey,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: question }],
+            temperature: 0.7
+          })
+        });
 
+        const result = await gpt.json();
+        const reply = result.choices?.[0]?.message?.content || "Antwort nicht gefunden.";
+        addMessage(reply, "bot");
+      } catch (e) {
+        console.error("Fallback error:", e);
+        addMessage("Fehler beim Abrufen der Antwort.", "bot");
+      }
+    }
+
+    function addMessage(text, type) {
+      const chat = document.getElementById("chat");
       const msg = document.createElement("div");
       msg.className = `bubble ${type}`;
       msg.innerText = text;
-
-      const time = document.createElement("div");
-      time.className = "timestamp";
-      time.innerText = new Intl.DateTimeFormat('de-DE', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-      }).format(timestamp);
-
-      wrapper.appendChild(msg);
-      wrapper.appendChild(time);
-      wrapper.style.alignSelf = type === "user" ? "flex-end" : "flex-start";
-      chat.appendChild(wrapper);
+      chat.appendChild(msg);
       chat.scrollTop = chat.scrollHeight;
     }
-
-    function clearChat() {
-      document.getElementById("chat").innerHTML = "";
-      logs = [];
-      chart.data.labels = [];
-      chart.data.datasets[0].data = [];
-      chart.update();
-    }
-
-    function downloadCSV() {
-      const header = "question,timestamp\n";
-      const rows = logs.map(l => `"${l.question}","${l.timestamp}"`).join("\n");
-      const blob = new Blob([header + rows], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "chat_logs.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    const ctx = document.getElementById('questionChart').getContext('2d');
-    let chart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: [], datasets: [{ label: 'Fragen pro Tag', data: [], backgroundColor: '#60a5fa' }] },
-      options: { scales: { y: { beginAtZero: true } } }
-    });
 
     function updateChart() {
       const counts = {};
@@ -251,9 +198,24 @@
       chart.data.datasets[0].data = sortedDates.map(date => counts[date]);
       chart.update();
     }
+
+    const ctx = document.getElementById('chart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Fragen pro Tag',
+          data: [],
+          backgroundColor: '#2563eb'
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
   </script>
-  <footer style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: #6b7280; font-family: 'Inter', sans-serif;">
-    Made with ❤️ & ☕ by Aayush, Anshu, Abdullah & Bibesh
-  </footer>
 </body>
 </html>
