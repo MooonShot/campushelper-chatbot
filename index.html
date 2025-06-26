@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>CampusHelper Chatbot</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; background: #f4f4f4; }
+    #chatbox { width: 100%; max-width: 600px; margin: 0 auto; background: white; padding: 1rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .bubble { padding: 0.5rem 1rem; margin: 0.5rem 0; border-radius: 10px; max-width: 80%; }
+    .user { background: #dcf8c6; align-self: flex-end; }
+    .bot { background: #e1e1e1; align-self: flex-start; }
+    .chatline { display: flex; }
+    input, button { padding: 0.5rem; margin-top: 1rem; font-size: 1rem; }
+  </style>
+</head>
+<body>
+<div id="chatbox">
+  <h2>🎓 CampusHelper Chatbot</h2>
+  <div id="chat"></div>
+  <input type="text" id="userInput" placeholder="Stelle deine Frage..." />
+  <button onclick="sendMessage()">Senden</button>
+</div>
+
+<script>
+  const endpoint = "https://zealous-water-0a6f8a503.1.azurestaticapps.net/";
+  const apiKey = "547a2c431f8bb4e2baa3510d5eae6ea3641368c48399331251d12dbbb632231901-468c27c3-444a-4542-9e61-48cc9b52e4ef00331250a6f8a503";
+
+  async function sendMessage() {
+    const input = document.getElementById("userInput");
+    const question = input.value;
+    if (!question) return;
+
+    addMessage(question, "user");
+    input.value = "";
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Ocp-Apim-Subscription-Key": apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ question: question })
+    });
+
+    const data = await response.json();
+    const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
+    addMessage(answer, "bot");
+  }
+
+  function addMessage(text, type) {
+    const chat = document.getElementById("chat");
+    const msg = document.createElement("div");
+    msg.className = `bubble ${type} chatline`;
+    msg.innerText = text;
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+  }
+</script>
+</body>
+</html>
