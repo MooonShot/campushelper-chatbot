@@ -84,6 +84,16 @@
     button:hover {
       background-color: #1d4ed8;
     }
+    #exportBtn {
+      margin-top: 1rem;
+      padding: 0.5rem;
+      background-color: #e5e7eb;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: #374151;
+    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -98,13 +108,14 @@
       <input type="text" id="userInput" placeholder="Stelle deine Frage..." />
       <button onclick="sendMessage()">Senden</button>
     </div>
+    <div id="exportBtn" onclick="downloadCSV()">📁 Chatverlauf exportieren</div>
   </div>
 
   <script>
     const endpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
     const apiKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
 
-    const logs = [];
+    let logs = [];
 
     async function sendMessage() {
       const input = document.getElementById("userInput");
@@ -156,6 +167,19 @@
       wrapper.style.alignSelf = type === "user" ? "flex-end" : "flex-start";
       chat.appendChild(wrapper);
       chat.scrollTop = chat.scrollHeight;
+    }
+
+    function downloadCSV() {
+      const header = "question,timestamp\n";
+      const rows = logs.map(l => `"${l.question}","${l.timestamp}"`).join("\n");
+      const blob = new Blob([header + rows], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "chat_logs.csv";
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     document.getElementById("userInput").addEventListener("keypress", function (e) {
