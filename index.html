@@ -85,8 +85,8 @@
     button:hover {
       background-color: #1d4ed8;
     }
-    #exportBtn {
-      margin-top: 1rem;
+    .action-btn {
+      margin-top: 0.5rem;
       padding: 0.5rem;
       background-color: #e5e7eb;
       border-radius: 8px;
@@ -112,7 +112,8 @@
       <input type="text" id="userInput" placeholder="Stelle deine Frage..." />
       <button onclick="sendMessage()">Senden</button>
     </div>
-    <div id="exportBtn" onclick="downloadCSV()">📁 Chatverlauf exportieren</div>
+    <div class="action-btn" onclick="downloadCSV()">📁 Chatverlauf exportieren</div>
+    <div class="action-btn" onclick="clearChat()">🧹 Chat zurücksetzen</div>
     <div id="summary">
       <canvas id="questionChart" height="150"></canvas>
     </div>
@@ -217,6 +218,14 @@
       a.download = "chat_logs.csv";
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    function clearChat() {
+      document.getElementById("chat").innerHTML = "";
+      logs = [];
+      chart.data.labels = [];
+      chart.data.datasets[0].data = [];
+      chart.update();
     }
 
     document.getElementById("userInput").addEventListener("keypress", function (e) {
