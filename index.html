@@ -1,242 +1,95 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CampusHelper Chatbot</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>CampusHelper - Hybrid Chatbot</title>
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(to right, #dbeafe, #f0f9ff);
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    #chatbox {
-      width: 100%;
-      max-width: 600px;
-      background: white;
-      padding: 1.5rem;
-      border-radius: 16px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-      display: flex;
-      flex-direction: column;
-    }
-    h2 {
-      margin: 0 0 1rem 0;
-      font-weight: 600;
-      color: #1e3a8a;
-    }
-    #chat {
-      flex: 1;
-      overflow-y: auto;
-      max-height: 300px;
-      padding-right: 5px;
-      margin-bottom: 1rem;
-    }
-    .bubble {
-      margin: 0.5rem 0;
-      padding: 0.75rem 1rem;
-      border-radius: 20px;
-      max-width: 80%;
-      word-wrap: break-word;
-      animation: fadeIn 0.3s ease-in-out;
-    }
-    .user {
-      background: #dbeafe;
-      align-self: flex-end;
-    }
-    .bot {
-      background: #f3f4f6;
-      align-self: flex-start;
-    }
-    .timestamp {
-      font-size: 0.75rem;
-      color: #6b7280;
-      margin-top: 2px;
-      margin-bottom: 4px;
-    }
-    .input-row {
-      display: flex;
-      gap: 0.5rem;
-    }
-    input[type="text"] {
-      flex: 1;
-      padding: 0.75rem 1rem;
-      border: 1px solid #ccc;
-      border-radius: 12px;
-      font-size: 1rem;
-    }
-    button {
-      padding: 0.75rem 1.25rem;
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.2s;
-    }
-    button:hover {
-      background-color: #1d4ed8;
-    }
-    .action-btn {
-      margin-top: 0.5rem;
-      padding: 0.5rem;
-      background-color: #e5e7eb;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 0.9rem;
-      cursor: pointer;
-      color: #374151;
-    }
-    #summary {
-      margin-top: 2rem;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    body { font-family: Arial, sans-serif; background: #f4f6f8; padding: 2rem; display: flex; justify-content: center; }
+    #chatbox { background: #fff; width: 100%; max-width: 600px; padding: 1rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; }
+    .bubble { margin: 0.5rem 0; padding: 0.75rem 1rem; border-radius: 10px; max-width: 80%; }
+    .user { background: #dbeafe; align-self: flex-end; }
+    .bot { background: #e5e7eb; align-self: flex-start; }
+    .chatline { display: flex; flex-direction: column; }
+    input, button { padding: 0.75rem; font-size: 1rem; margin-top: 1rem; width: 100%; }
+    button { background: #2563eb; color: white; border: none; cursor: pointer; }
+    button:hover { background: #1e40af; }
   </style>
 </head>
 <body>
   <div id="chatbox">
-    <h2>🎓 CampusHelper</h2>
-    <div id="chat"></div>
-    <div class="input-row">
-      <input type="text" id="userInput" placeholder="Stelle deine Frage..." />
-      <button onclick="sendMessage()">Senden</button>
-    </div>
-    <div class="action-btn" onclick="downloadCSV()">📁 Chatverlauf exportieren</div>
-    <div class="action-btn" onclick="clearChat()">🧹 Chat zurücksetzen</div>
-    <div id="summary">
-      <canvas id="questionChart" height="150"></canvas>
-    </div>
+    <h2>🎓 CampusHelper (Hybrid)</h2>
+    <div id="chat" class="chatline"></div>
+    <input type="text" id="userInput" placeholder="Frage hier..." />
+    <button onclick="sendMessage()">Senden</button>
   </div>
 
-  <script>
-    const endpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
-    const apiKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
+<script>
+  const qnaEndpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
+  const qnaApiKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
 
-    let logs = [];
+  const gptEndpoint = "https://aayus-mcduf5yn-swedencentral.cognitiveservices.azure.com/openai/deployments/gpt-35-turbo/chat/completions?api-version=2025-01-01-preview";
+  const gptApiKey = "9mPKBUdCCwKydTq9fN9WOQlYbtzC9WPfD6qnsIbKkhhk41Q2BIKBJQQJ99BFACfhMk5XJ3w3AAAAACOGeAUn";
 
-    const ctx = document.getElementById('questionChart').getContext('2d');
-    let chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Fragen pro Tag',
-          data: [],
-          backgroundColor: '#60a5fa'
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
+  async function sendMessage() {
+    const input = document.getElementById("userInput");
+    const question = input.value.trim();
+    if (!question) return;
 
-    async function sendMessage() {
-      const input = document.getElementById("userInput");
-      const question = input.value.trim();
-      if (!question) return;
+    addMessage(question, "user");
+    input.value = "";
 
-      const timestamp = new Date();
-      logs.push({ question, timestamp });
-      updateChart();
-      addMessage(question, "user", timestamp);
-      input.value = "";
-
-      try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Ocp-Apim-Subscription-Key": apiKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ question })
-        });
-
-        const data = await response.json();
-        const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
-        addMessage(answer, "bot", new Date());
-      } catch (error) {
-        console.error("Fehler bei der Anfrage:", error);
-        addMessage("Fehler beim Abrufen der Antwort.", "bot", new Date());
-      }
-    }
-
-    function updateChart() {
-      const counts = {};
-      logs.forEach(log => {
-        const date = new Date(log.timestamp).toLocaleDateString("de-DE");
-        counts[date] = (counts[date] || 0) + 1;
+    try {
+      const qnaResponse = await fetch(qnaEndpoint, {
+        method: "POST",
+        headers: {
+          "Ocp-Apim-Subscription-Key": qnaApiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ question })
       });
 
-      const sortedDates = Object.keys(counts).sort();
-      chart.data.labels = sortedDates;
-      chart.data.datasets[0].data = sortedDates.map(date => counts[date]);
-      chart.update();
-    }
+      const qnaData = await qnaResponse.json();
+      const qnaAnswer = qnaData.answers?.[0]?.answer;
 
-    function addMessage(text, type, timestamp) {
-      const chat = document.getElementById("chat");
-      const wrapper = document.createElement("div");
+      if (qnaAnswer && qnaAnswer !== "Keine passende Antwort gefunden.") {
+        addMessage(qnaAnswer, "bot");
+      } else {
+        const gptResponse = await fetch(gptEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": gptApiKey
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: "Du bist ein freundlicher Studienassistent an der THM. Antworte informativ." },
+              { role: "user", content: question }
+            ],
+            temperature: 0.7,
+            max_tokens: 800
+          })
+        });
 
-      const msg = document.createElement("div");
-      msg.className = `bubble ${type}`;
-      msg.innerText = text;
-
-      const time = document.createElement("div");
-      time.className = "timestamp";
-      time.innerText = new Intl.DateTimeFormat('de-DE', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-      }).format(timestamp);
-
-      wrapper.appendChild(msg);
-      wrapper.appendChild(time);
-      wrapper.style.alignSelf = type === "user" ? "flex-end" : "flex-start";
-      chat.appendChild(wrapper);
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    function downloadCSV() {
-      const header = "question,timestamp\n";
-      const rows = logs.map(l => `"${l.question}","${l.timestamp}"`).join("\n");
-      const blob = new Blob([header + rows], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "chat_logs.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    function clearChat() {
-      document.getElementById("chat").innerHTML = "";
-      logs = [];
-      chart.data.labels = [];
-      chart.data.datasets[0].data = [];
-      chart.update();
-    }
-
-    document.getElementById("userInput").addEventListener("keypress", function (e) {
-      if (e.key === "Enter") {
-        sendMessage();
+        const gptData = await gptResponse.json();
+        const gptAnswer = gptData.choices?.[0]?.message?.content || "Es gab ein Problem bei der GPT-Antwort.";
+        addMessage(gptAnswer, "bot");
       }
-    });
-  </script>
+    } catch (error) {
+      console.error(error);
+      addMessage("Fehler beim Abrufen der Antwort.", "bot");
+    }
+  }
 
-  <footer style="position: absolute; bottom: 10px; width: 100%; text-align: center; font-size: 0.9rem; color: #6b7280; font-family: 'Inter', sans-serif;">
-    Made with ❤️ & ☕ by Aayush, Anshu, Abdullah & Bibesh
-  </footer>
+  function addMessage(text, type) {
+    const chat = document.getElementById("chat");
+    const msg = document.createElement("div");
+    msg.className = `bubble ${type}`;
+    msg.innerText = text;
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+  }
+</script>
 </body>
 </html>
