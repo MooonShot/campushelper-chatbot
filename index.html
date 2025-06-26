@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusHelper Chatbot</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -34,7 +35,7 @@
     #chat {
       flex: 1;
       overflow-y: auto;
-      max-height: 400px;
+      max-height: 300px;
       padding-right: 5px;
       margin-bottom: 1rem;
     }
@@ -94,6 +95,9 @@
       cursor: pointer;
       color: #374151;
     }
+    #summary {
+      margin-top: 2rem;
+    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -109,6 +113,9 @@
       <button onclick="sendMessage()">Senden</button>
     </div>
     <div id="exportBtn" onclick="downloadCSV()">📁 Chatverlauf exportieren</div>
+    <div id="summary">
+      <canvas id="questionChart" height="150"></canvas>
+    </div>
   </div>
 
   <script>
@@ -117,6 +124,24 @@
 
     let logs = [];
 
+    const ctx = document.getElementById('questionChart').getContext('2d');
+    let chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Fragen pro Tag',
+          data: [],
+          backgroundColor: '#60a5fa'
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+
     async function sendMessage() {
       const input = document.getElementById("userInput");
       const question = input.value.trim();
@@ -124,8 +149,7 @@
 
       const timestamp = new Date();
       logs.push({ question, timestamp });
-      console.table(logs);
-
+      updateChart();
       addMessage(question, "user", timestamp);
       input.value = "";
 
@@ -146,6 +170,19 @@
         console.error("Fehler bei der Anfrage:", error);
         addMessage("Fehler beim Abrufen der Antwort.", "bot", new Date());
       }
+    }
+
+    function updateChart() {
+      const counts = {};
+      logs.forEach(log => {
+        const date = new Date(log.timestamp).toLocaleDateString("de-DE");
+        counts[date] = (counts[date] || 0) + 1;
+      });
+
+      const sortedDates = Object.keys(counts).sort();
+      chart.data.labels = sortedDates;
+      chart.data.datasets[0].data = sortedDates.map(date => counts[date]);
+      chart.update();
     }
 
     function addMessage(text, type, timestamp) {
