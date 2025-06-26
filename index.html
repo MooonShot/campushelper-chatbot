@@ -1,60 +1,143 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>CampusHelper v1.1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusHelper Chatbot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; padding: 2rem; background: #f4f4f4; }
-    #chatbox { width: 100%; max-width: 600px; margin: 0 auto; background: white; padding: 1rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .bubble { padding: 0.5rem 1rem; margin: 0.5rem 0; border-radius: 10px; max-width: 80%; }
-    .user { background: #dcf8c6; align-self: flex-end; }
-    .bot { background: #e1e1e1; align-self: flex-start; }
-    .chatline { display: flex; }
-    input, button { padding: 0.5rem; margin-top: 1rem; font-size: 1rem; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #dbeafe, #f0f9ff);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #chatbox {
+      width: 100%;
+      max-width: 600px;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+    h2 {
+      margin: 0 0 1rem 0;
+      font-weight: 600;
+      color: #1e3a8a;
+    }
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 400px;
+      padding-right: 5px;
+      margin-bottom: 1rem;
+    }
+    .bubble {
+      margin: 0.5rem 0;
+      padding: 0.75rem 1rem;
+      border-radius: 20px;
+      max-width: 80%;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    .user {
+      background: #dbeafe;
+      align-self: flex-end;
+    }
+    .bot {
+      background: #f3f4f6;
+      align-self: flex-start;
+    }
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.75rem 1.25rem;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
-<div id="chatbox">
-  <h2>🎓 CampusHelper Chatbot</h2>
-  <div id="chat"></div>
-  <input type="text" id="userInput" placeholder="Stelle deine Frage..." />
-  <button onclick="sendMessage()">Senden</button>
-</div>
+  <div id="chatbox">
+    <h2>🎓 CampusHelper</h2>
+    <div id="chat"></div>
+    <div class="input-row">
+      <input type="text" id="userInput" placeholder="Stelle deine Frage..." />
+      <button onclick="sendMessage()">Senden</button>
+    </div>
+  </div>
 
-<script>
-  const endpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
-  const apiKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
+  <script>
+    const endpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
+    const apiKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
 
-  async function sendMessage() {
-    const input = document.getElementById("userInput");
-    const question = input.value;
-    if (!question) return;
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const question = input.value.trim();
+      if (!question) return;
+      addMessage(question, "user");
+      input.value = "";
 
-    addMessage(question, "user");
-    input.value = "";
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Ocp-Apim-Subscription-Key": apiKey,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ question })
+        });
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Ocp-Apim-Subscription-Key": apiKey,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ question: question })
-    });
+        const data = await response.json();
+        const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
+        addMessage(answer, "bot");
+      } catch (error) {
+        console.error("Fehler bei der Anfrage:", error);
+        addMessage("Fehler beim Abrufen der Antwort.", "bot");
+      }
+    }
 
-    const data = await response.json();
-    const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
-    addMessage(answer, "bot");
-  }
+    function addMessage(text, type) {
+      const chat = document.getElementById("chat");
+      const msg = document.createElement("div");
+      msg.className = `bubble ${type}`;
+      msg.innerText = text;
+      chat.appendChild(msg);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  </script>
 
-  function addMessage(text, type) {
-    const chat = document.getElementById("chat");
-    const msg = document.createElement("div");
-    msg.className = `bubble ${type} chatline`;
-    msg.innerText = text;
-    chat.appendChild(msg);
-    chat.scrollTop = chat.scrollHeight;
-  }
-</script>
+  <footer style="position: absolute; bottom: 10px; width: 100%; text-align: center; font-size: 0.9rem; color: #6b7280; font-family: 'Inter', sans-serif;">
+    Made with ❤️ & ☕ by Aayush, Anshu, Abdullah & Bibesh
+  </footer>
 </body>
+
 </html>
