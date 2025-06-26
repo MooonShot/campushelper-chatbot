@@ -1,95 +1,163 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>CampusHelper - Hybrid Chatbot</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CampusHelper (Hybrid)</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f6f8; padding: 2rem; display: flex; justify-content: center; }
-    #chatbox { background: #fff; width: 100%; max-width: 600px; padding: 1rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h2 { margin-top: 0; }
-    .bubble { margin: 0.5rem 0; padding: 0.75rem 1rem; border-radius: 10px; max-width: 80%; }
-    .user { background: #dbeafe; align-self: flex-end; }
-    .bot { background: #e5e7eb; align-self: flex-start; }
-    .chatline { display: flex; flex-direction: column; }
-    input, button { padding: 0.75rem; font-size: 1rem; margin-top: 1rem; width: 100%; }
-    button { background: #2563eb; color: white; border: none; cursor: pointer; }
-    button:hover { background: #1e40af; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+    }
+    #container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 16px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      color: #1e3a8a;
+    }
+    .bubble {
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      margin: 0.5rem 0;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+    .user {
+      background: #bfdbfe;
+      align-self: flex-end;
+    }
+    .bot {
+      background: #e5e7eb;
+      align-self: flex-start;
+    }
+    #chat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    #controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.9rem;
+    }
+    footer {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
   </style>
 </head>
 <body>
-  <div id="chatbox">
+  <div id="container">
     <h2>🎓 CampusHelper (Hybrid)</h2>
-    <div id="chat" class="chatline"></div>
-    <input type="text" id="userInput" placeholder="Frage hier..." />
-    <button onclick="sendMessage()">Senden</button>
+
+    <label><input type="checkbox" id="useGPT" /> GPT-Modus aktivieren</label>
+
+    <div id="chat"></div>
+
+    <div id="controls">
+      <input type="text" id="userInput" placeholder="Frage hier..." />
+      <button onclick="sendMessage()">Senden</button>
+    </div>
   </div>
 
-<script>
-  const qnaEndpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
-  const qnaApiKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
+  <footer>
+    Made with ❤️ & ☕ by Aayush, Anshu, Abdullah & Bibesh
+  </footer>
 
-  const gptEndpoint = "https://aayus-mcduf5yn-swedencentral.cognitiveservices.azure.com/openai/deployments/gpt-35-turbo/chat/completions?api-version=2025-01-01-preview";
-  const gptApiKey = "9mPKBUdCCwKydTq9fN9WOQlYbtzC9WPfD6qnsIbKkhhk41Q2BIKBJQQJ99BFACfhMk5XJ3w3AAAAACOGeAUn";
+  <script>
+    const qnaEndpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
+    const qnaKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
 
-  async function sendMessage() {
-    const input = document.getElementById("userInput");
-    const question = input.value.trim();
-    if (!question) return;
+    const gptEndpoint = "https://aayus-mcduf5yn-swedencentral.cognitiveservices.azure.com/openai/deployments/gpt-35-turbo/chat/completions?api-version=2025-01-01-preview";
+    const gptKey = "9mPKBUdCCwKydTq9fN9WOQlYbtzC9WPfD6qnsIbKkhhk41Q2BIKBJQQJ99BFACfhMk5XJ3w3AAAAACOGeAUn";
+    const gptDeployment = "gpt-35-turbo";
 
-    addMessage(question, "user");
-    input.value = "";
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const question = input.value.trim();
+      if (!question) return;
 
-    try {
-      const qnaResponse = await fetch(qnaEndpoint, {
-        method: "POST",
-        headers: {
-          "Ocp-Apim-Subscription-Key": qnaApiKey,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ question })
-      });
+      addMessage(question, "user");
+      input.value = "";
 
-      const qnaData = await qnaResponse.json();
-      const qnaAnswer = qnaData.answers?.[0]?.answer;
+      const useGPT = document.getElementById("useGPT").checked;
+      let answer = "";
 
-      if (qnaAnswer && qnaAnswer !== "Keine passende Antwort gefunden.") {
-        addMessage(qnaAnswer, "bot");
-      } else {
-        const gptResponse = await fetch(gptEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "api-key": gptApiKey
-          },
-          body: JSON.stringify({
-            messages: [
-              { role: "system", content: "Du bist ein freundlicher Studienassistent an der THM. Antworte informativ." },
-              { role: "user", content: question }
-            ],
-            temperature: 0.7,
-            max_tokens: 800
-          })
-        });
-
-        const gptData = await gptResponse.json();
-        const gptAnswer = gptData.choices?.[0]?.message?.content || "Es gab ein Problem bei der GPT-Antwort.";
-        addMessage(gptAnswer, "bot");
+      try {
+        if (useGPT) {
+          const res = await fetch(`${gptEndpoint}/openai/deployments/${gptDeployment}/chat/completions?api-version=2023-05-15`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "api-key": gptKey
+            },
+            body: JSON.stringify({
+              messages: [{ role: "user", content: question }],
+              temperature: 0.7
+            })
+          });
+          const data = await res.json();
+          answer = data.choices?.[0]?.message?.content || "Keine Antwort gefunden.";
+        } else {
+          const res = await fetch(qnaEndpoint, {
+            method: "POST",
+            headers: {
+              "Ocp-Apim-Subscription-Key": qnaKey,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ question })
+          });
+          const data = await res.json();
+          answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
+        }
+      } catch (err) {
+        console.error(err);
+        answer = "Fehler bei der Anfrage.";
       }
-    } catch (error) {
-      console.error(error);
-      addMessage("Fehler beim Abrufen der Antwort.", "bot");
-    }
-  }
 
-  function addMessage(text, type) {
-    const chat = document.getElementById("chat");
-    const msg = document.createElement("div");
-    msg.className = `bubble ${type}`;
-    msg.innerText = text;
-    chat.appendChild(msg);
-    chat.scrollTop = chat.scrollHeight;
-  }
-</script>
+      addMessage(answer, "bot");
+    }
+
+    function addMessage(text, type) {
+      const chat = document.getElementById("chat");
+      const msg = document.createElement("div");
+      msg.className = `bubble ${type}`;
+      msg.innerText = text;
+      chat.appendChild(msg);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  </script>
 </body>
 </html>
