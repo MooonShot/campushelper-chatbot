@@ -1,49 +1,31 @@
-📘 Entwicklung betrieblicher Informationssysteme (WK_1109)
-📌 General Info:
-Module Code: WK_1109
+# CampusHelper Chatbot – Gruppe 13
 
-Module Name: Entwicklung betrieblicher Informationssysteme
+Ein cloudbasierter Chatbot für Studierende der THM, um häufige Fragen rund ums Studium, Campusleben und Services zu beantworten.
 
-Taught in: German & English
+## 📍 Live-Demo
 
-Semester: 4th
+👉 [CampusHelper Chatbot ansehen](https://campushelper-chatbot.vercel.app)
 
-ECTS: 6 CrP
+## 👥 Team (Gruppe 13)
 
-Workload: 180 hours total (60 contact, 120 self-study)
+- Babbar, Aayush  
+- Alhussein, Abdullah  
+- Pandey, Anshu  
+- Uprety, Bibash  
 
-Instructors: Armin Wagenknecht, Harald Ritz
+## 🛠️ Verwendete Technologien
 
-📚 Course Topics:
-Business Modeling
+- Azure Language Studio – Custom Question Answering  
+- Azure Static Web App (Frontend)  
+- Vercel Deployment  
+- HTML, JavaScript, CSS (Inter Font)  
+- Chart.js zur Visualisierung von Nutzungsdaten  
 
-Technical design of business applications
+## 🎯 Funktionen
 
-Cloud Computing & Development (incl. planning, architecture, virtualization, communication, and integration)
-
-Working with Cloud Platforms (Azure, AWS, Google Cloud)
-
-Cloud-based application implementation
-
-🎯 Learning Goals:
-Understand and apply business modeling rules
-
-Design & implement cloud-based solutions
-
-Work effectively in teams
-
-Independently explore and use cloud platform functions
-
-📝 Assessment:
-Testat (certificate/attendance)
-
-Klausur (written exam)
-
-✅ Bonus points possible (announced at course start)
-
-🔧 Technologies (as examples):
-Microsoft Azure
-
-Amazon AWS
-
-Google Cloud Platform
+- Frage-Antwort-Logik mit Azure KI  
+- Zeitstempel für jede Frage/Antwort  
+- Live-Statistik: Fragen pro Tag  
+- CSV-Export der Session  
+- Reset-Button zum Löschen des Verlaufs  
+- Minimalistische, responsive Oberfläche  
