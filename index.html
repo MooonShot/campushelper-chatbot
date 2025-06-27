@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -118,11 +117,14 @@
   </footer>
 
   <script>
-    const qnaEndpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
+   const qnaEndpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
     const qnaKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
     const gptEndpoint = "https://aayus-mcduf5yn-swedencentral.cognitiveservices.azure.com/";
     const gptKey = "9mPKBUdCCwKydTq9fN9WOQlYbtzC9WPfD6qnsIbKkhhk41Q2BIKBJQQJ99BFACfhMk5XJ3w3AAAAACOGeAUn";
     const gptDeployment = "gpt-35-turbo";
+
+    const supabaseUrl = "https://zuzirhfvtcrrlvolyolb.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1emlyaGZ2dGNycmx2b2x5b2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjE5MTMsImV4cCI6MjA2NjU5NzkxM30.afXaVUmXMLGL64Gls5RqZ8bJshyPxxrPsevVEMmsCfA";
 
     const logs = [];
 
@@ -139,6 +141,7 @@
 
       const useGPT = document.getElementById("useGPT").checked;
 
+      let answer = "";
       try {
         if (useGPT) {
           const res = await fetch(`${gptEndpoint}/openai/deployments/${gptDeployment}/chat/completions?api-version=2023-05-15`, {
@@ -153,8 +156,7 @@
             })
           });
           const data = await res.json();
-          const answer = data.choices?.[0]?.message?.content || "Keine Antwort von GPT.";
-          addMessage(answer, "bot", new Date());
+          answer = data.choices?.[0]?.message?.content || "Keine Antwort von GPT.";
         } else {
           const res = await fetch(qnaEndpoint, {
             method: "POST",
@@ -165,13 +167,32 @@
             body: JSON.stringify({ question })
           });
           const data = await res.json();
-          const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
-          addMessage(answer, "bot", new Date());
+          answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
         }
       } catch (err) {
         console.error(err);
-        addMessage("Fehler beim Abrufen der Antwort.", "bot", new Date());
+        answer = "Fehler beim Abrufen der Antwort.";
       }
+
+      addMessage(answer, "bot", new Date());
+
+      // Send to Supabase
+      await fetch(`${supabaseUrl}/rest/v1/chat_logs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify({
+          question: question,
+          answer: answer,
+          gpt_mode_enabled: useGPT,
+          timestamp: new Date().toISOString(),
+          ip_address: null
+        })
+      });
     }
 
     function addMessage(text, type, timestamp) {
