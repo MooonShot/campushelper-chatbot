@@ -1,66 +1,41 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CampusHelper</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
+      margin: 0;
       font-family: 'Inter', sans-serif;
       background: linear-gradient(to right, #dbeafe, #f0f9ff);
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
     }
-    #chatbox {
-      width: 100%;
-      max-width: 600px;
+    .container {
+      max-width: 640px;
+      margin: 2rem auto;
       background: white;
-      padding: 1.5rem;
+      padding: 2rem;
       border-radius: 16px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-      display: flex;
-      flex-direction: column;
-      margin: auto;
-      margin-top: 2rem;
     }
     h2 {
-      margin: 0 0 1rem 0;
-      font-weight: 600;
+      margin-top: 0;
       color: #1e3a8a;
     }
     #chat {
-      flex: 1;
-      overflow-y: auto;
-      max-height: 300px;
+      min-height: 150px;
       margin-bottom: 1rem;
     }
     .bubble {
-      margin: 0.5rem 0;
       padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
       border-radius: 20px;
       max-width: 80%;
-      word-wrap: break-word;
     }
-    .user {
-      background: #dbeafe;
-      align-self: flex-end;
-    }
-    .bot {
-      background: #f3f4f6;
-      align-self: flex-start;
-    }
-    .timestamp {
-      font-size: 0.75rem;
-      color: #6b7280;
-      margin-top: 2px;
-      margin-bottom: 4px;
-    }
+    .user { background-color: #dbeafe; text-align: right; margin-left: auto; }
+    .bot { background-color: #f3f4f6; text-align: left; margin-right: auto; }
     .input-row {
       display: flex;
       gap: 0.5rem;
@@ -68,8 +43,8 @@
     input[type="text"] {
       flex: 1;
       padding: 0.75rem 1rem;
-      border: 1px solid #ccc;
       border-radius: 12px;
+      border: 1px solid #ccc;
       font-size: 1rem;
     }
     button {
@@ -81,155 +56,60 @@
       cursor: pointer;
       font-size: 1rem;
     }
-    button:hover {
-      background-color: #1d4ed8;
-    }
     footer {
-      text-align: center;
       margin-top: 2rem;
+      text-align: center;
       font-size: 0.9rem;
       color: #6b7280;
-      font-family: 'Inter', sans-serif;
-      width: 100%;
     }
-    canvas {
+    #chart-container {
       margin-top: 2rem;
     }
   </style>
 </head>
 <body>
-  <div id="chatbox">
+  <div class="container">
     <h2>🎓 CampusHelper</h2>
-    <label><input type="checkbox" id="useGPT" /> GPT-Modus aktivieren</label>
+    <label><input type="checkbox" id="gptToggle" /> GPT-Modus aktivieren</label>
+
     <div id="chat"></div>
+
     <div class="input-row">
-      <input type="text" id="userInput" placeholder="Frage hier..." onkeydown="if(event.key==='Enter') sendMessage()" />
+      <input type="text" id="userInput" placeholder="Stelle deine Frage..." />
       <button onclick="sendMessage()">Senden</button>
     </div>
-    <div class="input-row" style="margin-top: 0.75rem;">
-      <button onclick="clearChat()">🧹 Chat zurücksetzen</button>
-      <button onclick="downloadCSV()">📁 Chatverlauf exportieren</button>
+
+    <div class="input-row" style="margin-top: 1rem;">
+      <button onclick="resetChat()">🧹 Chat zurücksetzen</button>
+      <button onclick="exportCSV()">📄 Chatverlauf exportieren</button>
     </div>
-    <canvas id="questionChart" height="150"></canvas>
+
+    <div id="chart-container">
+      <canvas id="chatChart"></canvas>
+    </div>
+
+    <footer>
+      Made with ❤️ & ☕ by Aayush, Anshu, Abdullah & Bibesh
+    </footer>
   </div>
 
-  <footer>
-    Made with ❤️ & ☕ by Aayush, Anshu, Abdullah & Bibesh
-  </footer>
-
   <script>
-    const qnaEndpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
-    const qnaKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
-    const gptEndpoint = "https://aayus-mcduf5yn-swedencentral.cognitiveservices.azure.com/";
-    const gptKey = "9mPKBUdCCwKydTq9fN9WOQlYbtzC9WPfD6qnsIbKkhhk41Q2BIKBJQQJ99BFACfhMk5XJ3w3AAAAACOGeAUn";
-    const gptDeployment = "gpt-35-turbo";
+    const endpointXLSX = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
+    const endpointGPT = "https://aayus-mcduf5yn-swedencentral.cognitiveservices.azure.com/";
+    const apiKey = "9mPKBUdCCwKydTq9fN9WOQlYbtzC9WPfD6qnsIbKkhhk41Q2BIKBJQQJ99BFACfhMk5XJ3w3AAAAACOGeAUn";
+    const supabaseUrl = "https://zuzirhfvtcrrlvolyolb.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1emlyaGZ2dGNycmx2b2x5b2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjE5MTMsImV4cCI6MjA2NjU5NzkxM30.afXaVUmXMLGL64Gls5RqZ8bJshyPxxrPsevVEMmsCfA";
 
     const logs = [];
+    const chat = document.getElementById("chat");
 
-    async function sendMessage() {
-      const input = document.getElementById("userInput");
-      const question = input.value.trim();
-      if (!question) return;
-
-      const timestamp = new Date();
-      logs.push({ question, timestamp });
-      addMessage(question, "user", timestamp);
-      updateChart();
-      input.value = "";
-
-      const useGPT = document.getElementById("useGPT").checked;
-
-      try {
-        if (useGPT) {
-          const res = await fetch(`${gptEndpoint}/openai/deployments/${gptDeployment}/chat/completions?api-version=2023-05-15`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "api-key": gptKey
-            },
-            body: JSON.stringify({
-              messages: [{ role: "user", content: question }],
-              temperature: 0.7
-            })
-          });
-          const data = await res.json();
-          const answer = data.choices?.[0]?.message?.content || "Keine Antwort von GPT.";
-          addMessage(answer, "bot", new Date());
-        } else {
-          const res = await fetch(qnaEndpoint, {
-            method: "POST",
-            headers: {
-              "Ocp-Apim-Subscription-Key": qnaKey,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ question })
-          });
-          const data = await res.json();
-          const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
-          addMessage(answer, "bot", new Date());
-        }
-      } catch (err) {
-        console.error(err);
-        addMessage("Fehler beim Abrufen der Antwort.", "bot", new Date());
-      }
-    }
-
-    function addMessage(text, type, timestamp) {
-      const chat = document.getElementById("chat");
-      const wrapper = document.createElement("div");
-      const msg = document.createElement("div");
-      msg.className = `bubble ${type}`;
-      msg.innerText = text;
-
-      const time = document.createElement("div");
-      time.className = "timestamp";
-      time.innerText = new Intl.DateTimeFormat("de-DE", {
-        day: "2-digit", month: "2-digit", year: "numeric",
-        hour: "2-digit", minute: "2-digit"
-      }).format(timestamp);
-
-      wrapper.appendChild(msg);
-      wrapper.appendChild(time);
-      wrapper.style.alignSelf = type === "user" ? "flex-end" : "flex-start";
-      chat.appendChild(wrapper);
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    function clearChat() {
-      document.getElementById("chat").innerHTML = "";
-      logs.length = 0;
-      chart.data.labels = [];
-      chart.data.datasets[0].data = [];
-      chart.update();
-    }
-
-    function downloadCSV() {
-      const header = "question,timestamp\n";
-      const rows = logs.map(l => `"${l.question}","${l.timestamp}"`).join("\n");
-      const blob = new Blob([header + rows], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "chat_logs.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    const ctx = document.getElementById("questionChart").getContext("2d");
-    const chart = new Chart(ctx, {
-      type: "bar",
+    const chart = new Chart(document.getElementById("chatChart"), {
+      type: 'bar',
       data: {
         labels: [],
-        datasets: [{
-          label: "Fragen pro Tag",
-          data: [],
-          backgroundColor: "#60a5fa"
-        }]
+        datasets: [{ label: 'Fragen pro Tag', data: [], backgroundColor: '#60a5fa' }]
       },
-      options: {
-        responsive: true,
-        scales: { y: { beginAtZero: true } }
-      }
+      options: { scales: { y: { beginAtZero: true } } }
     });
 
     function updateChart() {
@@ -242,27 +122,80 @@
       chart.data.labels = sorted;
       chart.data.datasets[0].data = sorted.map(d => counts[d]);
       chart.update();
-      
-      const supabaseUrl = "https://zuzirhfvtcrrlvolyolb.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1emlyaGZ2dGNycmx2b2x5b2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjE5MTMsImV4cCI6MjA2NjU5NzkxM30.afXaVUmXMLGL64Gls5RqZ8bJshyPxxrPsevVEMmsCfA";
-
-await fetch(`${supabaseUrl}/rest/v1/chat_logs`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "apikey": supabaseKey,
-    "Authorization": `Bearer ${supabaseKey}`,
-    "Prefer": "return=minimal"
-  },
-  body: JSON.stringify({
-    question: question,
-    answer: answer,
-    gpt_mode_enabled: gptEnabled,
-    timestamp: new Date().toISOString(),
-    ip_address: null // or capture it if you want
-  })
-});
     }
+
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const question = input.value.trim();
+      if (!question) return;
+      const isGPT = document.getElementById("gptToggle").checked;
+      input.value = "";
+      addMessage(question, "user");
+
+      try {
+        const response = await fetch(isGPT ? endpointGPT : endpointXLSX, {
+          method: "POST",
+          headers: {
+            "Ocp-Apim-Subscription-Key": apiKey,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ question })
+        });
+
+        const data = await response.json();
+        const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
+        addMessage(answer, "bot");
+
+        const entry = { question, answer, gpt_mode_enabled: isGPT, timestamp: new Date().toISOString(), ip_address: null };
+        logs.push(entry);
+        updateChart();
+
+        await fetch(`${supabaseUrl}/rest/v1/chat_logs`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+            Prefer: "return=minimal"
+          },
+          body: JSON.stringify(entry)
+        });
+
+      } catch (err) {
+        console.error("Error:", err);
+        addMessage("Fehler beim Abrufen der Antwort.", "bot");
+      }
+    }
+
+    function addMessage(msg, type) {
+      const bubble = document.createElement("div");
+      bubble.className = `bubble ${type}`;
+      bubble.innerText = msg;
+      chat.appendChild(bubble);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function resetChat() {
+      chat.innerHTML = "";
+      logs.length = 0;
+      updateChart();
+    }
+
+    function exportCSV() {
+      const csv = ["Frage,Antwort,GPT-Modus,Zeit"];
+      logs.forEach(l => {
+        csv.push(`"${l.question.replace(/"/g, '""')}","${l.answer.replace(/"/g, '""')}",${l.gpt_mode_enabled},${l.timestamp}`);
+      });
+      const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "chatverlauf.csv";
+      a.click();
+    }
+
+    document.getElementById("userInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") sendMessage();
+    });
   </script>
 </body>
 </html>
