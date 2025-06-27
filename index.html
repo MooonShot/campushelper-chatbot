@@ -1,10 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CampusHelper</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -13,23 +14,23 @@
       margin: 0;
       padding: 0;
       display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      flex-direction: column;
       min-height: 100vh;
     }
-    #container {
+    #chatbox {
       width: 100%;
-      max-width: 650px;
-      margin-top: 3rem;
+      max-width: 600px;
       background: white;
-      padding: 2rem;
+      padding: 1.5rem;
       border-radius: 16px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
+      margin: auto;
+      margin-top: 2rem;
     }
     h2 {
-      margin-top: 0;
+      margin: 0 0 1rem 0;
       font-weight: 600;
       color: #1e3a8a;
     }
@@ -45,7 +46,6 @@
       border-radius: 20px;
       max-width: 80%;
       word-wrap: break-word;
-      animation: fadeIn 0.3s ease-in-out;
     }
     .user {
       background: #dbeafe;
@@ -74,45 +74,68 @@
       border-radius: 12px;
       cursor: pointer;
       font-size: 1rem;
-      transition: background 0.2s;
     }
     button:hover {
       background-color: #1d4ed8;
     }
-    #summary {
+    footer {
+      text-align: center;
       margin-top: 2rem;
+      font-size: 0.9rem;
+      color: #6b7280;
+      font-family: 'Inter', sans-serif;
+      width: 100%;
     }
-    canvas {
-      margin-top: 1rem;
+    .actions {
+      margin-top: 0.75rem;
+      display: flex;
+      gap: 1rem;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    .actions button {
+      background: #f3f4f6;
+      color: #1f2937;
+      border: 1px solid #d1d5db;
+    }
+    .actions button:hover {
+      background: #e5e7eb;
+    }
+    #toggle-container {
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      color: #1f2937;
     }
   </style>
 </head>
 <body>
-  <div id="container">
+  <div id="chatbox">
     <h2>🎓 CampusHelper</h2>
+    <div id="toggle-container">
+      <label><input type="checkbox" id="useGPT" /> GPT-Modus aktivieren</label>
+    </div>
     <div id="chat"></div>
-    <form class="input-row" onsubmit="sendMessage(); return false;">
-      <input type="text" id="userInput" placeholder="Frage hier..." autocomplete="off" />
-      <button type="submit">Senden</button>
-    </form>
-
-    <div id="summary">
-      <h4>Fragen pro Tag</h4>
-      <canvas id="chart" width="400" height="150"></canvas>
+    <div class="input-row">
+      <input type="text" id="userInput" placeholder="Frage hier..." onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button onclick="sendMessage()">Senden</button>
+    </div>
+    <div class="actions">
+      <button onclick="clearChat()">🧹 Chat zurücksetzen</button>
+      <button onclick="downloadCSV()">📁 Chatverlauf exportieren</button>
     </div>
   </div>
-  <script>
-    const hybridMode = true; // Toggle this manually if needed
 
+  <footer>
+    Made with ❤️ & ☕ by Aayush, Anshu, Abdullah & Bibesh
+  </footer>
+
+  <script>
     const qnaEndpoint = "https://chatbot-jattus.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=CampusHelper&api-version=2021-10-01&deploymentName=production";
     const qnaKey = "EbvNA38yknUy3j6X2TiDT7Jy4o9zWDrLnczvmgmaqRE9PWA70GRtJQQJ99BFACPV0roXJ3w3AAAaACOGmCSu";
     const gptEndpoint = "https://aayus-mcduf5yn-swedencentral.cognitiveservices.azure.com/";
     const gptKey = "9mPKBUdCCwKydTq9fN9WOQlYbtzC9WPfD6qnsIbKkhhk41Q2BIKBJQQJ99BFACfhMk5XJ3w3AAAAACOGeAUn";
-    const openAIModel = "gpt-35-turbo";
+    const gptDeployment = "gpt-35-turbo";
 
     const logs = [];
 
@@ -121,54 +144,44 @@
       const question = input.value.trim();
       if (!question) return;
 
+      const timestamp = new Date().toISOString();
+      logs.push({ question, timestamp });
       addMessage(question, "user");
-      logs.push({ question, timestamp: new Date().toISOString() });
-      updateChart();
       input.value = "";
 
+      const useGPT = document.getElementById("useGPT").checked;
+
       try {
-        const res = await fetch(azureEndpoint, {
-          method: "POST",
-          headers: {
-            "Ocp-Apim-Subscription-Key": azureKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ question })
-        });
-
-        const data = await res.json();
-        const answer = data.answers?.[0]?.answer;
-
-        if (answer && answer !== "Keine passende Antwort gefunden.") {
+        if (useGPT) {
+          const res = await fetch(`${gptEndpoint}/openai/deployments/${gptDeployment}/chat/completions?api-version=2023-05-15`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "api-key": gptKey
+            },
+            body: JSON.stringify({
+              messages: [{ role: "user", content: question }],
+              temperature: 0.7
+            })
+          });
+          const data = await res.json();
+          const answer = data.choices?.[0]?.message?.content || "Keine Antwort von GPT.";
           addMessage(answer, "bot");
         } else {
-          fallbackToGPT(question);
+          const res = await fetch(qnaEndpoint, {
+            method: "POST",
+            headers: {
+              "Ocp-Apim-Subscription-Key": qnaKey,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ question })
+          });
+          const data = await res.json();
+          const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
+          addMessage(answer, "bot");
         }
-      } catch (e) {
-        console.error(e);
-        fallbackToGPT(question);
-      }
-    }
-
-    async function fallbackToGPT(question) {
-      try {
-        const gpt = await fetch(`${openAIEndpoint}/openai/deployments/${openAIModel}/chat/completions?api-version=2023-03-15-preview`, {
-          method: "POST",
-          headers: {
-            "api-key": openAIKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            messages: [{ role: "user", content: question }],
-            temperature: 0.7
-          })
-        });
-
-        const result = await gpt.json();
-        const reply = result.choices?.[0]?.message?.content || "Antwort nicht gefunden.";
-        addMessage(reply, "bot");
-      } catch (e) {
-        console.error("Fallback error:", e);
+      } catch (err) {
+        console.error(err);
         addMessage("Fehler beim Abrufen der Antwort.", "bot");
       }
     }
@@ -182,35 +195,21 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    function updateChart() {
-      const counts = {};
-      logs.forEach(log => {
-        const date = new Date(log.timestamp).toLocaleDateString("de-DE");
-        counts[date] = (counts[date] || 0) + 1;
-      });
-      const sortedDates = Object.keys(counts).sort();
-      chart.data.labels = sortedDates;
-      chart.data.datasets[0].data = sortedDates.map(date => counts[date]);
-      chart.update();
+    function clearChat() {
+      document.getElementById("chat").innerHTML = "";
     }
 
-    const ctx = document.getElementById('chart').getContext('2d');
-    const chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Fragen pro Tag',
-          data: [],
-          backgroundColor: '#2563eb'
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
+    function downloadCSV() {
+      const header = "question,timestamp\n";
+      const rows = logs.map(l => `"${l.question}","${l.timestamp}"`).join("\n");
+      const blob = new Blob([header + rows], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "chat_logs.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   </script>
 </body>
 </html>
