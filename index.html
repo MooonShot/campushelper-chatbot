@@ -55,6 +55,12 @@
       background: #f3f4f6;
       align-self: flex-start;
     }
+    .timestamp {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 2px;
+      margin-bottom: 4px;
+    }
     .input-row {
       display: flex;
       gap: 0.5rem;
@@ -86,44 +92,25 @@
       font-family: 'Inter', sans-serif;
       width: 100%;
     }
-    .actions {
-      margin-top: 0.75rem;
-      display: flex;
-      gap: 1rem;
-    }
-    .actions button {
-      background: #f3f4f6;
-      color: #1f2937;
-      border: 1px solid #d1d5db;
-    }
-    .actions button:hover {
-      background: #e5e7eb;
-    }
-    #toggle-container {
-      margin-bottom: 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.95rem;
-      color: #1f2937;
+    canvas {
+      margin-top: 2rem;
     }
   </style>
 </head>
 <body>
   <div id="chatbox">
     <h2>🎓 CampusHelper</h2>
-    <div id="toggle-container">
-      <label><input type="checkbox" id="useGPT" /> GPT-Modus aktivieren</label>
-    </div>
+    <label><input type="checkbox" id="useGPT" /> GPT-Modus aktivieren</label>
     <div id="chat"></div>
     <div class="input-row">
       <input type="text" id="userInput" placeholder="Frage hier..." onkeydown="if(event.key==='Enter') sendMessage()" />
       <button onclick="sendMessage()">Senden</button>
     </div>
-    <div class="actions">
+    <div class="input-row" style="margin-top: 0.75rem;">
       <button onclick="clearChat()">🧹 Chat zurücksetzen</button>
       <button onclick="downloadCSV()">📁 Chatverlauf exportieren</button>
     </div>
+    <canvas id="questionChart" height="150"></canvas>
   </div>
 
   <footer>
@@ -144,9 +131,10 @@
       const question = input.value.trim();
       if (!question) return;
 
-      const timestamp = new Date().toISOString();
+      const timestamp = new Date();
       logs.push({ question, timestamp });
-      addMessage(question, "user");
+      addMessage(question, "user", timestamp);
+      updateChart();
       input.value = "";
 
       const useGPT = document.getElementById("useGPT").checked;
@@ -166,7 +154,7 @@
           });
           const data = await res.json();
           const answer = data.choices?.[0]?.message?.content || "Keine Antwort von GPT.";
-          addMessage(answer, "bot");
+          addMessage(answer, "bot", new Date());
         } else {
           const res = await fetch(qnaEndpoint, {
             method: "POST",
@@ -178,25 +166,41 @@
           });
           const data = await res.json();
           const answer = data.answers?.[0]?.answer || "Keine passende Antwort gefunden.";
-          addMessage(answer, "bot");
+          addMessage(answer, "bot", new Date());
         }
       } catch (err) {
         console.error(err);
-        addMessage("Fehler beim Abrufen der Antwort.", "bot");
+        addMessage("Fehler beim Abrufen der Antwort.", "bot", new Date());
       }
     }
 
-    function addMessage(text, type) {
+    function addMessage(text, type, timestamp) {
       const chat = document.getElementById("chat");
+      const wrapper = document.createElement("div");
       const msg = document.createElement("div");
       msg.className = `bubble ${type}`;
       msg.innerText = text;
-      chat.appendChild(msg);
+
+      const time = document.createElement("div");
+      time.className = "timestamp";
+      time.innerText = new Intl.DateTimeFormat("de-DE", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      }).format(timestamp);
+
+      wrapper.appendChild(msg);
+      wrapper.appendChild(time);
+      wrapper.style.alignSelf = type === "user" ? "flex-end" : "flex-start";
+      chat.appendChild(wrapper);
       chat.scrollTop = chat.scrollHeight;
     }
 
     function clearChat() {
       document.getElementById("chat").innerHTML = "";
+      logs.length = 0;
+      chart.data.labels = [];
+      chart.data.datasets[0].data = [];
+      chart.update();
     }
 
     function downloadCSV() {
@@ -209,6 +213,35 @@
       a.download = "chat_logs.csv";
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    const ctx = document.getElementById("questionChart").getContext("2d");
+    const chart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: [],
+        datasets: [{
+          label: "Fragen pro Tag",
+          data: [],
+          backgroundColor: "#60a5fa"
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    function updateChart() {
+      const counts = {};
+      logs.forEach(log => {
+        const date = new Date(log.timestamp).toLocaleDateString("de-DE");
+        counts[date] = (counts[date] || 0) + 1;
+      });
+      const sorted = Object.keys(counts).sort();
+      chart.data.labels = sorted;
+      chart.data.datasets[0].data = sorted.map(d => counts[d]);
+      chart.update();
     }
   </script>
 </body>
