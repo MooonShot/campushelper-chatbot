@@ -242,10 +242,27 @@
       chart.data.labels = sorted;
       chart.data.datasets[0].data = sorted.map(d => counts[d]);
       chart.update();
+      
+      const supabaseUrl = "https://zuzirhfvtcrrlvolyolb.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1emlyaGZ2dGNycmx2b2x5b2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMjE5MTMsImV4cCI6MjA2NjU5NzkxM30.afXaVUmXMLGL64Gls5RqZ8bJshyPxxrPsevVEMmsCfA";
+
+await fetch(`${supabaseUrl}/rest/v1/chat_logs`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "apikey": supabaseKey,
+    "Authorization": `Bearer ${supabaseKey}`,
+    "Prefer": "return=minimal"
+  },
+  body: JSON.stringify({
+    question: question,
+    answer: answer,
+    gpt_mode_enabled: gptEnabled,
+    timestamp: new Date().toISOString(),
+    ip_address: null // or capture it if you want
+  })
+});
     }
   </script>
-  <footer style="position: absolute; bottom: 10px; width: 100%; text-align: center; font-size: 0.9rem; color: #6b7280; font-family: 'Inter', sans-serif;">
-    Made with ❤️ & ☕ by Aayush, Anshu, Abdullah & Bibash
-  </footer>
 </body>
 </html>
