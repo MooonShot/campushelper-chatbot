@@ -15,7 +15,7 @@ Ein cloudbasierter Chatbot für Studierende der THM, um häufige Fragen rund ums
 
 ## 🛠️ Verwendete Technologien
 
-- Azure Language Studio – Custom Question Answering  
+- Azure Language Studio  Custom Question Answering  
 - Azure Static Web App (Frontend)  
 - Vercel Deployment  
 - HTML, JavaScript, CSS (Inter Font)  
